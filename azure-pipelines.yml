@@ -1,0 +1,65 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+
+# -----------------------------
+# Python
+# -----------------------------
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.11'
+
+  displayName: 'Install Python 3.11'
+
+
+# -----------------------------
+# Install dependencies
+# -----------------------------
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install Dependencies'
+
+
+# -----------------------------
+# SonarQube Cloud Preparation
+# -----------------------------
+- task: SonarCloudPrepare@3
+  inputs:
+    SonarCloud: 'codescanning'
+    organization: 'gunp'
+    scannerMode: 'CLI'
+    configMode: 'file'
+
+  displayName: 'Prepare SonarQube Cloud Analysis'
+
+
+# -----------------------------
+# Run tests + coverage
+# -----------------------------
+- script: |
+    pytest --cov=. \
+           --cov-report=xml:coverage.xml \
+           --cov-report=term
+  displayName: 'Run Unit Tests'
+
+
+# -----------------------------
+# SonarQube Cloud Analysis
+# -----------------------------
+- task: SonarCloudAnalyze@3
+  displayName: 'Run SonarQube Cloud Analysis'
+
+
+# -----------------------------
+# Quality Gate
+# -----------------------------
+- task: SonarCloudPublish@3
+  inputs:
+    pollingTimeoutSec: '300'
+
+  displayName: 'Publish Quality Gate Result'
